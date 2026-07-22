@@ -1,0 +1,34 @@
+{# ScrapeKit plugin settings. #}
+{% import "_includes/forms.twig" as forms %}
+
+<p>
+    {{ 'These defaults can be overridden per environment via {file}.'|t('scrapekit', { file: '<code>config/scrapekit.php</code>' })|raw }}
+</p>
+
+{{ forms.textField({
+    label: 'Cache duration (seconds)'|t('scrapekit'),
+    instructions: 'How long a fetched document is cached. 0 disables caching.'|t('scrapekit'),
+    id: 'cacheDuration',
+    name: 'settings[cacheDuration]',
+    type: 'number',
+    size: 8,
+    value: settings.cacheDuration,
+}) }}
+
+{{ forms.textField({
+    label: 'Request timeout (seconds)'|t('scrapekit'),
+    instructions: 'Maximum time to wait for a response.'|t('scrapekit'),
+    id: 'timeout',
+    name: 'settings[timeout]',
+    type: 'number',
+    size: 4,
+    value: settings.timeout,
+}) }}
+
+{{ forms.textField({
+    label: 'User-Agent'|t('scrapekit'),
+    instructions: 'The User-Agent header sent with every request.'|t('scrapekit'),
+    id: 'userAgent',
+    name: 'settings[userAgent]',
+    value: settings.userAgent,
+}) }}
