@@ -17,8 +17,12 @@ class Crawler
 
     public function __construct(string $html)
     {
+        // Start from an empty crawler (no document attached), then load the HTML.
         // addHtmlContent tolerates malformed/custom (XML-ish) markup gracefully.
-        $this->crawler = new SymfonyCrawler('');
+        // Note: passing a string to the constructor would attach a first document,
+        // and addHtmlContent() a second - which DomCrawler 7.x forbids - so we
+        // construct with no argument and attach exactly one document here.
+        $this->crawler = new SymfonyCrawler();
         $this->crawler->addHtmlContent($html, 'UTF-8');
     }
 
