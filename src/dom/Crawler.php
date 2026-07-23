@@ -8,17 +8,21 @@ use Craft;
 use Symfony\Component\DomCrawler\Crawler as SymfonyCrawler;
 
 /**
- * A thin wrapper around Symfony's DomCrawler that returns Node objects and
- * understands the legacy SimpleHtmlDom `<` operator.
+ * A parsed document, queryable with CSS selectors or XPath.
+ *
+ * Wraps Symfony's DomCrawler (spec-compliant HTML5 parsing included) and
+ * carries the outcome of the fetch that produced it (`ok`, `statusCode`).
  */
 class Crawler
 {
     private SymfonyCrawler $crawler;
 
-    public function __construct(string $html)
-    {
+    public function __construct(
+        string $html,
+        public readonly bool $ok = true,
+        public readonly int $statusCode = 200,
+    ) {
         // Start from an empty crawler (no document attached), then load the HTML.
-        // addHtmlContent tolerates malformed/custom (XML-ish) markup gracefully.
         // Note: passing a string to the constructor would attach a first document,
         // and addHtmlContent() a second - which DomCrawler 7.x forbids - so we
         // construct with no argument and attach exactly one document here.
@@ -28,37 +32,73 @@ class Crawler
 
     /**
      * Find elements matching a CSS selector.
-     *
-     * SimpleHtmlDom's `<` operator is translated to the CSS descendant
-     * combinator (a space) for backwards compatibility.
-     *
-     * @return Node[]
      */
-    public function find(string $selector): array
+    public function find(string $selector): NodeList
     {
-        $selector = self::translateSelector($selector);
-
         try {
-            $nodes = $this->crawler->filter($selector);
+            $matched = $this->crawler->filter($selector);
         } catch (\Throwable $e) {
             Craft::error("ScrapeKit selector failed '{$selector}': " . $e->getMessage(), __METHOD__);
-            return [];
+            return new NodeList();
         }
 
-        $results = [];
-        foreach ($nodes as $domNode) {
-            $results[] = new Node($domNode);
-        }
-
-        return $results;
+        return self::wrap($matched);
     }
 
     /**
-     * Translate SimpleHtmlDom's `<` (child/descendant) operator to a CSS space
-     * (descendant combinator).
+     * Find elements matching an XPath expression.
      */
-    public static function translateSelector(string $selector): string
+    public function findXPath(string $expression): NodeList
     {
-        return preg_replace('/\s*<\s*/', ' ', $selector);
+        try {
+            $matched = $this->crawler->filterXPath($expression);
+        } catch (\Throwable $e) {
+            Craft::error("ScrapeKit XPath failed '{$expression}': " . $e->getMessage(), __METHOD__);
+            return new NodeList();
+        }
+
+        return self::wrap($matched);
+    }
+
+    /**
+     * The first element matching a CSS selector, or null.
+     */
+    public function first(string $selector): ?Node
+    {
+        return $this->find($selector)->first();
+    }
+
+    /**
+     * The text content of the first match ('' when nothing matches).
+     */
+    public function text(string $selector): string
+    {
+        return $this->first($selector)?->text() ?? '';
+    }
+
+    /**
+     * The inner HTML of the first match ('' when nothing matches).
+     */
+    public function html(string $selector): string
+    {
+        return $this->first($selector)?->html() ?? '';
+    }
+
+    /**
+     * An attribute of the first match ('' when nothing matches).
+     */
+    public function attr(string $selector, string $name): string
+    {
+        return $this->first($selector)?->attr($name) ?? '';
+    }
+
+    private static function wrap(SymfonyCrawler $matched): NodeList
+    {
+        $nodes = [];
+        foreach ($matched as $domNode) {
+            $nodes[] = new Node($domNode);
+        }
+
+        return new NodeList($nodes);
     }
 }

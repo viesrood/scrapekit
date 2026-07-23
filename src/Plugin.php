@@ -7,6 +7,8 @@ namespace viesrood\scrapekit;
 use Craft;
 use craft\base\Model;
 use craft\base\Plugin as BasePlugin;
+use craft\events\RegisterCacheOptionsEvent;
+use craft\utilities\ClearCaches;
 use craft\web\twig\variables\CraftVariable;
 use craft\web\View;
 use viesrood\scrapekit\models\Settings;
@@ -16,16 +18,20 @@ use yii\base\Event;
 /**
  * ScrapeKit plugin.
  *
- * Fetch and parse external HTML (or XML) from Twig templates, on top of
- * Symfony DomCrawler + Guzzle, with a familiar SimpleHtmlDom-style API:
- * `craft.scrapekit.get(url).find(selector)`.
- *
- * A Craft 5 successor to the abandoned `topshelfcraft/scraper` plugin.
+ * Fetch and query external HTML, XML-ish markup, or JSON straight from Twig:
+ * `craft.scrapekit.get(url)` returns a queryable document (CSS selectors,
+ * XPath, node traversal), `craft.scrapekit.json(url)` returns decoded JSON.
+ * Responses are cached with a dedicated cache tag.
  *
  * @property-read ScraperService $scraper
  */
 class Plugin extends BasePlugin
 {
+    /**
+     * Cache tag applied to every cached response.
+     */
+    public const CACHE_TAG = 'scrapekit';
+
     public string $schemaVersion = '1.0.0';
 
     public bool $hasCpSettings = true;
@@ -56,6 +62,18 @@ class Plugin extends BasePlugin
                 /** @var CraftVariable $variable */
                 $variable = $event->sender;
                 $variable->set('scrapekit', $this->getScraper());
+            }
+        );
+
+        // Make the response cache clearable from Craft's Caches utility.
+        Event::on(
+            ClearCaches::class,
+            ClearCaches::EVENT_REGISTER_TAG_OPTIONS,
+            static function (RegisterCacheOptionsEvent $event): void {
+                $event->options[] = [
+                    'tag' => self::CACHE_TAG,
+                    'label' => Craft::t('scrapekit', 'ScrapeKit responses'),
+                ];
             }
         );
 

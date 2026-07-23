@@ -1,6 +1,6 @@
 {
     "name": "viesrood/scrapekit",
-    "description": "Fetch and parse external HTML or XML from your Twig templates, on top of Symfony DomCrawler. A Craft 5 successor to topshelfcraft/scraper.",
+    "description": "Fetch and query external HTML, XML or JSON straight from your Twig templates: CSS selectors, XPath, node traversal, and cached HTTP fetching for Craft CMS 5.",
     "type": "craft-plugin",
     "license": "MIT",
     "keywords": [
@@ -11,7 +11,8 @@
         "scraping",
         "dom-crawler",
         "html",
-        "xml"
+        "xml",
+        "json"
     ],
     "support": {
         "docs": "https://github.com/viesrood/scrapekit/blob/main/README.md",

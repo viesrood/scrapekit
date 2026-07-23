@@ -8,4 +8,5 @@ return [
     'Maximum time to wait for a response.' => 'Maximum time to wait for a response.',
     'User-Agent' => 'User-Agent',
     'The User-Agent header sent with every request.' => 'The User-Agent header sent with every request.',
+    'ScrapeKit responses' => 'ScrapeKit responses',
 ];
