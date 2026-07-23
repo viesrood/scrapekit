@@ -76,8 +76,6 @@ class Plugin extends BasePlugin
                 ];
             }
         );
-
-        Craft::info('ScrapeKit plugin loaded', __METHOD__);
     }
 
     /**
@@ -98,7 +96,12 @@ class Plugin extends BasePlugin
 
     protected function settingsHtml(): ?string
     {
-        return Craft::$app->getView()->renderTemplate('scrapekit/settings', [
+        $view = Craft::$app->getView();
+        if (!$view instanceof View) {
+            throw new \RuntimeException('ScrapeKit settings require Craft web view.');
+        }
+
+        return $view->renderTemplate('scrapekit/settings', [
             'plugin' => $this,
             'settings' => $this->getSettings(),
         ], View::TEMPLATE_MODE_CP);

@@ -35,7 +35,7 @@ class Node
     {
         $html = '';
         foreach ($this->node->childNodes as $child) {
-            $html .= $child->ownerDocument->saveHTML($child);
+            $html .= $child->ownerDocument?->saveHTML($child) ?: '';
         }
         return $html;
     }

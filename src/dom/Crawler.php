@@ -21,13 +21,18 @@ class Crawler
         string $html,
         public readonly bool $ok = true,
         public readonly int $statusCode = 200,
+        public readonly string $url = '',
+        public readonly string $contentType = '',
+        public readonly bool $fromCache = false,
+        public readonly ?string $errorCode = null,
+        string $format = 'html',
     ) {
-        // Start from an empty crawler (no document attached), then load the HTML.
-        // Note: passing a string to the constructor would attach a first document,
-        // and addHtmlContent() a second - which DomCrawler 7.x forbids - so we
-        // construct with no argument and attach exactly one document here.
         $this->crawler = new SymfonyCrawler();
-        $this->crawler->addHtmlContent($html, 'UTF-8');
+        if ($format === 'xml') {
+            $this->crawler->addXmlContent($html, 'UTF-8', LIBXML_NONET);
+        } else {
+            $this->crawler->addHtmlContent($html, 'UTF-8');
+        }
     }
 
     /**

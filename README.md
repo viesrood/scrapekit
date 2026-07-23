@@ -31,12 +31,16 @@ HTTP fetching - all behind one Twig variable.
   `texts()`, `attrs('href')`
 - **CSS and XPath** - `find('div.item > a')` or `findXPath('//item/title')`
 - **JSON too** - `craft.scrapekit.json(url)` fetches and decodes JSON APIs
+- **Concurrent batches** - fetch multiple pages with `getMany()` while preserving
+  input keys and isolating failures
 - **HTML5 parsing** - documents are parsed with a spec-compliant HTML5 parser
   (via Symfony DomCrawler), so real-world markup behaves like it does in a browser
 - **Cached and polite** - responses are cached (1 hour by default) with a dedicated
   cache tag; clear them from Craft's Caches utility or `php craft scrapekit/cache/clear`
-- **Per-request options** - override cache duration, timeout, user agent, or add
-  headers for a single call
+- **Safe by default** - private networks, unsafe redirects, and oversized
+  responses are blocked; cache variants include all effective request headers
+- **Per-request options** - lower the cache duration or timeout, choose a parser,
+  override the user agent, or add safe headers for a single call
 - **Never breaks your page** - fetch and selector errors are logged and degrade to
   empty results; check `page.ok` / `page.statusCode` when you want to know
 
@@ -70,6 +74,25 @@ php craft plugin/install scrapekit
 }) %}
 
 {% if page.ok %} ... {% else %} status: {{ page.statusCode }} {% endif %}
+```
+
+Request metadata is available as `page.url`, `page.contentType`,
+`page.fromCache`, and `page.errorCode`.
+
+### Batches
+
+`getMany()` fetches cache misses concurrently (five at a time by default), keeps
+the input keys, and returns a failed Crawler for an individual error:
+
+```twig
+{% set pages = craft.scrapekit.getMany({
+    news: 'https://example.com/news',
+    events: 'https://example.com/events',
+}) %}
+
+{% if pages.news.ok %}
+    {{ pages.news.text('h1') }}
+{% endif %}
 ```
 
 ### Querying
@@ -115,6 +138,25 @@ php craft plugin/install scrapekit
 {% endif %}
 ```
 
+`json()` remains backwards compatible and returns associative arrays or `null`.
+Use `jsonResult()` when the API can return any valid JSON value or when response
+metadata is needed:
+
+```twig
+{% set result = craft.scrapekit.jsonResult('https://api.example.com/value') %}
+{% if result.ok %}
+    {{ result.data|json_encode }}
+{% else %}
+    {{ result.errorCode }}
+{% endif %}
+```
+
+### XML
+
+`get()` parses as HTML (lenient). For XML use `craft.scrapekit.xml(url)` or
+`{format: 'xml'}`; `{format: 'auto'}` picks the parser from the content type or
+XML declaration.
+
 ## Configuration
 
 Defaults are editable under **Settings → Plugins → ScrapeKit**, or overridden per
@@ -124,11 +166,37 @@ environment with a `config/scrapekit.php` file (which wins over the stored setti
 <?php
 
 return [
-    'cacheDuration' => 3600, // seconds; 0 disables caching
-    'timeout'       => 30,   // request timeout in seconds
-    'userAgent'     => 'Mozilla/5.0 (compatible; CraftCMS ScrapeKit)',
+    'cacheDuration'        => 3600,
+    'timeout'              => 15,
+    'connectTimeout'       => 5,
+    'maxResponseBytes'     => 5 * 1024 * 1024,
+    'maxRedirects'         => 3,
+    'retryCount'           => 1,
+    'concurrency'          => 5,
+    'userAgent'            => 'Mozilla/5.0 (compatible; CraftCMS ScrapeKit)',
+    'allowedHosts'         => '', // comma/newline separated; supports *.example.com
+    'allowedPorts'         => '80,443',
+    'allowPrivateNetworks' => false,
 ];
 ```
+
+An empty `allowedHosts` value permits all public hosts. For a fixed integration,
+set an allowlist. Private, loopback, link-local, multicast, and reserved IP
+ranges remain blocked unless `allowPrivateNetworks` is explicitly enabled.
+
+Per-request options cannot raise the configured timeout, concurrency, response
+size, redirect, port, host, or network limits.
+
+## Security and output escaping
+
+ScrapeKit fetches trusted integration URLs from developer-authored templates; do
+not concatenate untrusted visitor input into a URL. `html()` and `outerHtml()`
+return unsanitized remote markup. Twig escapes it normally—only add `|raw` when
+the remote source is trusted and its markup is intentionally rendered.
+
+Only `http` and `https` are supported. URL credentials and unsafe `Host`,
+proxy, and hop-by-hop headers are rejected. Logs omit query strings and
+credentials.
 
 ## Cache
 

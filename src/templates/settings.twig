@@ -1,34 +1,141 @@
-{# ScrapeKit plugin settings. #}
 {% import "_includes/forms.twig" as forms %}
 
 <p>
-    {{ 'These defaults can be overridden per environment via {file}.'|t('scrapekit', { file: '<code>config/scrapekit.php</code>' })|raw }}
+    {{ 'These defaults can be overridden per environment via {file}.'|t('scrapekit', {
+        file: '<code>config/scrapekit.php</code>',
+    })|raw }}
 </p>
+
+<h2>{{ 'Cache'|t('scrapekit') }}</h2>
 
 {{ forms.textField({
     label: 'Cache duration (seconds)'|t('scrapekit'),
     instructions: 'How long a fetched document is cached. 0 disables caching.'|t('scrapekit'),
     id: 'cacheDuration',
-    name: 'settings[cacheDuration]',
+    name: 'cacheDuration',
     type: 'number',
+    min: 0,
+    max: 31536000,
     size: 8,
     value: settings.cacheDuration,
+    errors: settings.getErrors('cacheDuration'),
 }) }}
+
+<h2>{{ 'Reliability'|t('scrapekit') }}</h2>
 
 {{ forms.textField({
     label: 'Request timeout (seconds)'|t('scrapekit'),
-    instructions: 'Maximum time to wait for a response.'|t('scrapekit'),
+    instructions: 'Maximum total time to wait for a response.'|t('scrapekit'),
     id: 'timeout',
-    name: 'settings[timeout]',
+    name: 'timeout',
     type: 'number',
+    min: 1,
+    max: 300,
     size: 4,
     value: settings.timeout,
+    errors: settings.getErrors('timeout'),
+}) }}
+
+{{ forms.textField({
+    label: 'Connection timeout (seconds)'|t('scrapekit'),
+    instructions: 'Maximum time to establish a connection.'|t('scrapekit'),
+    id: 'connectTimeout',
+    name: 'connectTimeout',
+    type: 'number',
+    min: 1,
+    max: 300,
+    size: 4,
+    value: settings.connectTimeout,
+    errors: settings.getErrors('connectTimeout'),
+}) }}
+
+{{ forms.textField({
+    label: 'Maximum response size (bytes)'|t('scrapekit'),
+    instructions: 'Requests are stopped when the decoded response exceeds this size.'|t('scrapekit'),
+    id: 'maxResponseBytes',
+    name: 'maxResponseBytes',
+    type: 'number',
+    min: 1024,
+    max: 104857600,
+    size: 12,
+    value: settings.maxResponseBytes,
+    errors: settings.getErrors('maxResponseBytes'),
+}) }}
+
+{{ forms.textField({
+    label: 'Maximum redirects'|t('scrapekit'),
+    id: 'maxRedirects',
+    name: 'maxRedirects',
+    type: 'number',
+    min: 0,
+    max: 10,
+    size: 3,
+    value: settings.maxRedirects,
+    errors: settings.getErrors('maxRedirects'),
+}) }}
+
+{{ forms.textField({
+    label: 'Retries'|t('scrapekit'),
+    instructions: 'Retries are only used for transient network and server failures.'|t('scrapekit'),
+    id: 'retryCount',
+    name: 'retryCount',
+    type: 'number',
+    min: 0,
+    max: 3,
+    size: 3,
+    value: settings.retryCount,
+    errors: settings.getErrors('retryCount'),
+}) }}
+
+{{ forms.textField({
+    label: 'Batch concurrency'|t('scrapekit'),
+    instructions: 'Maximum number of simultaneous requests made by getMany().'|t('scrapekit'),
+    id: 'concurrency',
+    name: 'concurrency',
+    type: 'number',
+    min: 1,
+    max: 20,
+    size: 3,
+    value: settings.concurrency,
+    errors: settings.getErrors('concurrency'),
 }) }}
 
 {{ forms.textField({
     label: 'User-Agent'|t('scrapekit'),
     instructions: 'The User-Agent header sent with every request.'|t('scrapekit'),
     id: 'userAgent',
-    name: 'settings[userAgent]',
+    name: 'userAgent',
     value: settings.userAgent,
+    errors: settings.getErrors('userAgent'),
+}) }}
+
+<h2>{{ 'Network security'|t('scrapekit') }}</h2>
+
+{{ forms.textareaField({
+    label: 'Allowed hosts'|t('scrapekit'),
+    instructions: 'Optional exact hosts or *.example.com patterns, separated by commas or new lines. Leave empty to allow all public hosts.'|t('scrapekit'),
+    id: 'allowedHosts',
+    name: 'allowedHosts',
+    rows: 4,
+    value: settings.allowedHosts,
+    errors: settings.getErrors('allowedHosts'),
+}) }}
+
+{{ forms.textField({
+    label: 'Allowed ports'|t('scrapekit'),
+    instructions: 'Comma-separated destination ports.'|t('scrapekit'),
+    id: 'allowedPorts',
+    name: 'allowedPorts',
+    value: settings.allowedPorts,
+    errors: settings.getErrors('allowedPorts'),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Allow private networks'|t('scrapekit'),
+    instructions: 'Allows localhost, private and reserved IP ranges. Enable only for explicitly trusted internal services.'|t('scrapekit'),
+    warning: 'This weakens SSRF protection.'|t('scrapekit'),
+    id: 'allowPrivateNetworks',
+    name: 'allowPrivateNetworks',
+    on: settings.allowPrivateNetworks,
+    errors: settings.getErrors('allowPrivateNetworks'),
 }) }}
