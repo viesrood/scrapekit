@@ -8,6 +8,7 @@ use Craft;
 use craft\base\Component;
 use GuzzleHttp\Exception\RequestException;
 use viesrood\scrapekit\dom\Crawler;
+use viesrood\scrapekit\models\Settings;
 use viesrood\scrapekit\Plugin;
 use yii\caching\TagDependency;
 
@@ -59,8 +60,10 @@ class ScraperService extends Component
     /**
      * Fetch a URL through the cache.
      *
-     * Only successful responses are cached, tagged so they can be invalidated
-     * as a group (Craft's Caches utility, `php craft scrapekit/cache/clear`).
+     * Only successful, non-empty responses are cached, tagged so they can be
+     * invalidated as a group (Craft's Caches utility, `php craft
+     * scrapekit/cache/clear`). A network error or an empty body is retried once,
+     * so a transient glitch never gets cached for the full cache duration.
      *
      * @return array{ok: bool, status: int, body: string}
      */
@@ -78,6 +81,33 @@ class ScraperService extends Component
             }
         }
 
+        // Retry once on a failed or empty response - both are usually transient.
+        $result = $this->request($url, $options, $settings);
+        if (!$result['ok'] || trim($result['body']) === '') {
+            $result = $this->request($url, $options, $settings);
+        }
+
+        // Never cache an empty (or failed) response: a one-off glitch must not
+        // poison the cache for the whole cache duration.
+        if ($cacheDuration > 0 && $result['ok'] && trim($result['body']) !== '') {
+            Craft::$app->getCache()->set(
+                $cacheKey,
+                ['status' => $result['status'], 'body' => $result['body']],
+                $cacheDuration,
+                new TagDependency(['tags' => Plugin::CACHE_TAG]),
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Perform a single HTTP GET.
+     *
+     * @return array{ok: bool, status: int, body: string}
+     */
+    private function request(string $url, array $options, Settings $settings): array
+    {
         $headers = ['User-Agent' => $options['userAgent'] ?? $settings->userAgent];
         foreach ($options['headers'] ?? [] as $name => $value) {
             $headers[$name] = $value;
@@ -89,19 +119,11 @@ class ScraperService extends Component
                 'headers' => $headers,
             ]);
 
-            $status = $response->getStatusCode();
-            $body = (string)$response->getBody();
-
-            if ($cacheDuration > 0) {
-                Craft::$app->getCache()->set(
-                    $cacheKey,
-                    ['status' => $status, 'body' => $body],
-                    $cacheDuration,
-                    new TagDependency(['tags' => Plugin::CACHE_TAG]),
-                );
-            }
-
-            return ['ok' => true, 'status' => $status, 'body' => $body];
+            return [
+                'ok' => true,
+                'status' => $response->getStatusCode(),
+                'body' => (string)$response->getBody(),
+            ];
         } catch (\Throwable $e) {
             $status = $e instanceof RequestException && $e->getResponse() !== null
                 ? $e->getResponse()->getStatusCode()

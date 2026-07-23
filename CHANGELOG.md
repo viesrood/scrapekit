@@ -1,5 +1,10 @@
 # Release Notes for ScrapeKit
 
+## 1.0.1 - 2026-07-23
+
+### Changed
+- Fetching is now more resilient: a network error or an empty response is retried once, and empty or failed responses are never cached - so a transient glitch can no longer poison the cache for the full cache duration.
+
 ## 1.0.0 - 2026-07-23
 
 ### Added
